@@ -15,7 +15,7 @@ A library for .NET Core 2 WebApi methods caching
             ...
             options.Filters.Add<MyAuthenticationFilter>();
             options.Filters.Add<MyAuthrizationFilter>();
-            // note to call this method only after the authorization and authentication filters (if any),
+            // note to call this method only after the authorization and authentication filters (if any) were registered,
             // otherwise, non-authenticated/non-authorized users might get sensitive data from cache since they skipped the required authorization and/or authentication processes.
             options.UseWebApiCaching();
         });
