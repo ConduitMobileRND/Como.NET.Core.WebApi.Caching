@@ -6,7 +6,7 @@
         <RootNamespace>Como.WebApi.Caching</RootNamespace>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <Authors>eitan@como.com</Authors>
-        <Version>0.0.1</Version>
+        <Version>0.0.2</Version>
         <PackageLicenseUrl>https://github.com/ConduitMobileRND/Como.NET.Core.WebApi.Caching/blob/master/LICENSE</PackageLicenseUrl>
         <PackageProjectUrl>https://github.com/ConduitMobileRND/Como.NET.Core.WebApi.Caching</PackageProjectUrl>
         <Copyright>Como</Copyright>
