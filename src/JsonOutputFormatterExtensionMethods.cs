@@ -1,25 +1,21 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using Newtonsoft.Json;
+using Microsoft.AspNetCore.Mvc.Formatters;
 
 namespace Como.WebApi.Caching
 {
-    public static class HashExtensionMethods
+    public static class JsonOutputFormatterExtensionMethods
     {
-        private static readonly JsonSerializer HashSerializer = new JsonSerializer();
-
-        public static string ComputeHash(this object target)
+        public static string ComputeHash(this JsonOutputFormatter formatter, object target)
         {
             using (var stream = new MemoryStream())
             {
                 using (var writer = new StreamWriter(stream))
                 {
-                    using (var jsonWriter = new JsonTextWriter(writer))
-                    {
-                        HashSerializer.Serialize(jsonWriter, target);
-                    }
+                    formatter.WriteObject(writer, target);
                 }
+
                 return stream.ToArray().ComputeSha1Hash();
             }
         }

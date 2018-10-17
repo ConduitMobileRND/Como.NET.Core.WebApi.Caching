@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Como.WebApi.Caching;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Como.WebApi.Caching
-{        
+{
     public interface IWebApiCacheAdapter
     {
         /// <summary>

@@ -6,8 +6,8 @@ namespace Como.WebApi.Caching
 {
     public interface ICacheParametersResolver
     {
-        string ResolveScopeValue(string scopeName, ActionExecutingContext context);
         TimeSpan? DefaultExpiration { get; }
+        string ResolveScopeValue(string scopeName, ActionExecutingContext context);
         ICollection<Type> GetWebApiControllers();
     }
 }

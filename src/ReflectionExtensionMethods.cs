@@ -19,6 +19,7 @@ namespace Como.WebApi.Caching
             {
                 return type.FullName;
             }
+
             var typeNameTagCharIndex = type.Name.IndexOf('`');
             var typeName = typeNameTagCharIndex == -1 ? type.Name : type.Name.Substring(0, typeNameTagCharIndex);
             var genericArguments = string.Join(", ", type.GetGenericArguments().Select(GetUniqueIdentifier));

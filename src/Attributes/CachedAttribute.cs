@@ -8,10 +8,11 @@ namespace Como.WebApi.Caching.Attributes
 
         public CachedAttribute(params string[] cacheGroups)
         {
-            if (cacheGroups.Length == 0)
+            if (cacheGroups == null || cacheGroups.Length == 0)
             {
                 throw new ArgumentException("At least one cache group should be specified", nameof(cacheGroups));
             }
+
             CacheGroups = cacheGroups;
         }
 

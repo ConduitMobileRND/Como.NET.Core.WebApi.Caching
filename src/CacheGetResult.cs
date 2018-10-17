@@ -1,5 +1,3 @@
-using Como.WebApi.Caching;
-
 namespace Como.WebApi.Caching
 {
     public class CacheGetResult

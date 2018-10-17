@@ -6,19 +6,20 @@ using Microsoft.AspNetCore.Mvc;
 namespace Como.WebApi.Caching
 {
     /// <summary>
-    ///     A special <see cref="ActionResult" /> that writes a pre-serialized payload to the response output stream
-    ///     in order to avoid unnecessary object deserialization &amp; serialization in cases we have a JSON string in hand 
+    ///     A <see cref="ActionResult" /> that writes any given payload to the response body output stream
+    ///     without using output formatters.
     /// </summary>
     public class RawActionResult : ActionResult
     {
         public const string JsonContentType = "application/json; charset=utf-8";
-        
+        private readonly string _contentType;
+
         private readonly IDictionary<string, string> _headers;
         private readonly byte[] _payload;
-        private readonly string _contentType;
         private readonly int _statusCode;
 
-        public RawActionResult(int statusCode, byte[] payload, string contentType, IDictionary<string, string> headers = null)
+        public RawActionResult(int statusCode, byte[] payload, string contentType,
+            IDictionary<string, string> headers = null)
         {
             _statusCode = statusCode;
             _payload = payload;

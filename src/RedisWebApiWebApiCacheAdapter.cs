@@ -51,7 +51,11 @@ namespace Como.WebApi.Caching
             if (!statusCode.HasValue)
             {
                 var newValue = await cacheMissResolver();
-                await CacheMethodResult(parameters, newValue);
+                if (newValue != null)
+                {
+                    await CacheMethodResult(parameters, statusCodeFieldName, jsonFieldName, newValue);
+                }
+
                 return new CacheGetResult(false, null);
             }
 
@@ -69,9 +73,9 @@ namespace Como.WebApi.Caching
             return new CacheGetResult(true, result);
         }
 
-        private async Task CacheMethodResult(CacheMethodParameters parameters, IActionResult result)
+        private async Task CacheMethodResult(
+            CacheMethodParameters parameters, string statusCodeFieldName, string jsonFieldName, IActionResult result)
         {
-            var (statusCodeFieldName, jsonFieldName) = GetCacheParametersFieldNames(parameters);
             var entries = new List<HashEntry>();
             switch (result)
             {
@@ -109,9 +113,10 @@ namespace Como.WebApi.Caching
             return $"{methodName}:{scopeName}:{scopeValue}";
         }
 
-        private (string statusCode, string json) GetCacheParametersFieldNames(CacheMethodParameters parameters)
+        private (string statusCodeFieldName, string jsonFieldName)
+            GetCacheParametersFieldNames(CacheMethodParameters parameters)
         {
-            var parametersHash = parameters.Parameters.ComputeHash();
+            var parametersHash = _jsonOutputFormatter.ComputeHash(parameters.Parameters);
             return ($"{parametersHash}:statusCode", $"{parametersHash}:json");
         }
 
