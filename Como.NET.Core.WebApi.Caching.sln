@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Como.NET.Core.WebApi.Caching", "src\Como.NET.Core.WebApi.Caching.csproj", "{8E66E74C-3519-411D-B134-384312828112}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsageExample", "UsageExample\UsageExample.csproj", "{1043767B-64E0-416D-B877-2A08EAEE4EFB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{8E66E74C-3519-411D-B134-384312828112}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E66E74C-3519-411D-B134-384312828112}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8E66E74C-3519-411D-B134-384312828112}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1043767B-64E0-416D-B877-2A08EAEE4EFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1043767B-64E0-416D-B877-2A08EAEE4EFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1043767B-64E0-416D-B877-2A08EAEE4EFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1043767B-64E0-416D-B877-2A08EAEE4EFB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
