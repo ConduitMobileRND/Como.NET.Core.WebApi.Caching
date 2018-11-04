@@ -18,10 +18,10 @@ namespace Como.WebApi.Caching
     public class RedisWebApiWebApiCacheAdapter : IWebApiCacheAdapter, IHostedService, IDisposable
     {
         private readonly JsonOutputFormatter _jsonOutputFormatter;
-        private readonly IConnectionMultiplexer _redisConnectionMultiplexer;
         private readonly ILogger<IWebApiCacheAdapter> _logger;
-        private readonly ConsecutiveTimer _timer;        
         private readonly ConcurrentQueue<DelayedInvalidationParameters> _methodsToInvalidate;
+        private readonly IConnectionMultiplexer _redisConnectionMultiplexer;
+        private readonly ConsecutiveTimer _timer;
 
         public RedisWebApiWebApiCacheAdapter(
             IConnectionMultiplexer redisConnectionMultiplexer,
@@ -31,9 +31,26 @@ namespace Como.WebApi.Caching
             _timer = new ConsecutiveTimer();
             _timer.OnTick += ProcessDelayedActionsQueue;
             _methodsToInvalidate = new ConcurrentQueue<DelayedInvalidationParameters>();
-            _redisConnectionMultiplexer = redisConnectionMultiplexer;                        
+            _redisConnectionMultiplexer = redisConnectionMultiplexer;
             _jsonOutputFormatter = GetJsonOutputFormatterFromMvcOptions(mvcOptions);
             _logger = logger;
+        }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _timer.Start(TimeSpan.FromMilliseconds(100));
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _timer?.Stop();
+            return Task.CompletedTask;
         }
 
         public async Task InvalidateCachedMethodResults(IList<MethodInvalidationParameters> methodParameters)
@@ -168,23 +185,6 @@ namespace Como.WebApi.Caching
             }
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            _timer.Start(TimeSpan.FromMilliseconds(100));
-            return Task.CompletedTask;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            _timer?.Stop();
-            return Task.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-            _timer?.Dispose();
-        }
-
         private void ProcessDelayedActionsQueue()
         {
             var dequeuedBuffer = new List<DelayedInvalidationParameters>();
@@ -207,6 +207,7 @@ namespace Como.WebApi.Caching
                     }
                 }
             }
+
             dequeuedBuffer.ForEach(_methodsToInvalidate.Enqueue);
         }
     }

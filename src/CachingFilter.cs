@@ -41,7 +41,7 @@ namespace Como.WebApi.Caching
             var actionMethod = actionDescriptor.MethodInfo;
             var invalidatesAttribute = actionMethod.GetCustomAttribute<InvalidatesCacheAttribute>();
             var delayedInvalidatesAttribute = actionMethod.GetCustomAttribute<DelayedInvalidatesCacheAttribute>();
-            
+
             var cachedAttribute = actionMethod.GetCustomAttribute<CachedAttribute>();
             if (cachedAttribute != null && (invalidatesAttribute != null || delayedInvalidatesAttribute != null))
             {
@@ -70,7 +70,7 @@ namespace Como.WebApi.Caching
             {
                 await HandleInvalidatesAttribute(invalidatesAttribute, context);
             }
-            
+
             if (delayedInvalidatesAttribute != null)
             {
                 HandleDelayedInvalidatesAttribute(delayedInvalidatesAttribute, context);
@@ -207,7 +207,7 @@ namespace Como.WebApi.Caching
 
             return result;
         }
-        
+
         private void HandleDelayedInvalidatesAttribute(DelayedInvalidatesCacheAttribute attribute,
             ActionExecutingContext context)
         {

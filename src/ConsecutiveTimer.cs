@@ -7,7 +7,6 @@ namespace Como.WebApi.Caching
     {
         private readonly Timer _timer;
         private readonly object _timerSyncLock;
-        public event Action OnTick;
         private int _timerStarted;
 
         public ConsecutiveTimer()
@@ -16,12 +15,21 @@ namespace Como.WebApi.Caching
             _timerSyncLock = new object();
         }
 
+        public void Dispose()
+        {
+            _timer?.Dispose();
+            _timerStarted = 0;
+        }
+
+        public event Action OnTick;
+
         public void Start(TimeSpan interval)
         {
             if (Interlocked.CompareExchange(ref _timerStarted, 1, 0) == 1)
             {
                 throw new InvalidOperationException("Timer already started!");
             }
+
             _timer.Change(TimeSpan.Zero, interval);
         }
 
@@ -31,9 +39,10 @@ namespace Como.WebApi.Caching
             {
                 throw new InvalidOperationException("Timer already stopped!");
             }
+
             _timer.Change(Timeout.Infinite, 0);
         }
-        
+
         private void InvokeOnTick(object state)
         {
             if (!Monitor.TryEnter(_timerSyncLock))
@@ -49,12 +58,6 @@ namespace Como.WebApi.Caching
             {
                 Monitor.Exit(_timerSyncLock);
             }
-        }
-
-        public void Dispose()
-        {            
-            _timer?.Dispose();
-            _timerStarted = 0;
         }
     }
 }

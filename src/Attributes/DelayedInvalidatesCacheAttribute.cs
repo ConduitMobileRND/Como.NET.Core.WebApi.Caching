@@ -12,7 +12,7 @@ namespace Como.WebApi.Caching.Attributes
             InvalidatesAfter = TimeSpan.Parse(invalidateAfter);
             CacheGroups = cacheGroups;
         }
-                
+
         public string[] CacheGroups { get; }
     }
 }
