@@ -26,12 +26,15 @@ namespace Como.WebApi.Caching
         private static IDictionary<string, List<MethodInfo>> _cachedMethodsPerGroup;
         private readonly IWebApiCacheAdapter _cacheAdapter;
         private readonly ICacheParametersResolver _cacheParametersResolver;
+        private readonly DelayedInvalidationQueue _delayedInvalidationQueue;
 
         public CachingFilter(IWebApiCacheAdapter cacheAdapterAdapter,
-            ICacheParametersResolver cacheParametersResolver)
+            ICacheParametersResolver cacheParametersResolver,
+            DelayedInvalidationQueue delayedInvalidationQueue)
         {
             _cacheAdapter = cacheAdapterAdapter;
             _cacheParametersResolver = cacheParametersResolver;
+            _delayedInvalidationQueue = delayedInvalidationQueue;
             _cachedMethodsPerGroup = _cachedMethodsPerGroup ?? GetCachedMethodsPerGroup();
         }
 
@@ -112,11 +115,14 @@ namespace Como.WebApi.Caching
             }
 
             var scopeValue = _cacheParametersResolver.ResolveScopeValue(attribute.ScopeName, context);
+            var outputContentType = actionMethod.GetCustomAttribute<ProducesAttribute>()?.ContentTypes.First()
+                                    ?? RawActionResult.JsonContentType;
             var methodParameters = new CacheMethodParameters(
                 actionMethod.GetUniqueIdentifier(),
                 attribute.ScopeName,
                 scopeValue,
                 context.ActionArguments,
+                outputContentType,
                 attribute.ExpireAfterTimeSpan ?? _cacheParametersResolver.DefaultExpiration,
                 attribute.SlidingExpiration);
             var cacheGetResult = await _cacheAdapter.GetOrUpdate(methodParameters, () => OnCacheMiss(next));
@@ -229,7 +235,7 @@ namespace Como.WebApi.Caching
                 }
             }
 
-            _cacheAdapter.InvalidateCachedMethodResultsWithDelay(invalidationParameters, attribute.InvalidatesAfter);
+            _delayedInvalidationQueue.Enqueue(invalidationParameters, attribute.InvalidatesAfter);
         }
     }
 }

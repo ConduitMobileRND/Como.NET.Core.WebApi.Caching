@@ -1,56 +1,24 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace Como.WebApi.Caching
 {
-    public class RedisWebApiWebApiCacheAdapter : IWebApiCacheAdapter, IHostedService, IDisposable
+    public class RedisWebApiWebApiCacheAdapter : IWebApiCacheAdapter
     {
-        private readonly JsonOutputFormatter _jsonOutputFormatter;
-        private readonly ILogger<IWebApiCacheAdapter> _logger;
-        private readonly ConcurrentQueue<DelayedInvalidationParameters> _methodsToInvalidate;
         private readonly IConnectionMultiplexer _redisConnectionMultiplexer;
-        private readonly ConsecutiveTimer _timer;
+        private readonly ISerializationResolver _serializationResolver;
 
         public RedisWebApiWebApiCacheAdapter(
-            IConnectionMultiplexer redisConnectionMultiplexer,
-            IOptions<MvcOptions> mvcOptions,
-            ILogger<IWebApiCacheAdapter> logger)
+            IConnectionMultiplexer redisConnectionMultiplexer, 
+            ISerializationResolver serializationResolver)
         {
-            _timer = new ConsecutiveTimer();
-            _timer.OnTick += ProcessDelayedActionsQueue;
-            _methodsToInvalidate = new ConcurrentQueue<DelayedInvalidationParameters>();
             _redisConnectionMultiplexer = redisConnectionMultiplexer;
-            _jsonOutputFormatter = GetJsonOutputFormatterFromMvcOptions(mvcOptions);
-            _logger = logger;
-        }
-
-        public void Dispose()
-        {
-            _timer?.Dispose();
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            _timer.Start(TimeSpan.FromMilliseconds(100));
-            return Task.CompletedTask;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            _timer?.Stop();
-            return Task.CompletedTask;
+            _serializationResolver = serializationResolver;
         }
 
         public async Task InvalidateCachedMethodResults(IList<MethodInvalidationParameters> methodParameters)
@@ -68,31 +36,25 @@ namespace Como.WebApi.Caching
             await database.KeyDeleteAsync(keys);
         }
 
-        public void InvalidateCachedMethodResultsWithDelay(
-            IList<MethodInvalidationParameters> methodParameters, TimeSpan delay)
-        {
-            _methodsToInvalidate.Enqueue(new DelayedInvalidationParameters
-            {
-                Methods = methodParameters,
-                DueTime = DateTime.UtcNow + delay
-            });
-        }
-
         public async Task<CacheGetResult> GetOrUpdate(
             CacheMethodParameters parameters, Func<Task<IActionResult>> cacheMissResolver)
         {
             var database = _redisConnectionMultiplexer.GetDatabase();
             var key = GetCacheKey(parameters.MethodName, parameters.ScopeName, parameters.ScopeValue);
-            var (statusCodeFieldName, jsonFieldName) = GetCacheParametersFieldNames(parameters);
-            var cached = await database.HashGetAsync(key, new RedisValue[] {statusCodeFieldName, jsonFieldName});
+            var (statusCodeFieldName, payloadFieldName, contentTypeFieldName) = GetCacheParametersFieldNames(parameters);
+            var cached = await database.HashGetAsync(key, new RedisValue[]
+            {
+                statusCodeFieldName, payloadFieldName, contentTypeFieldName
+            });
             var statusCode = cached[0];
-            var json = cached[1];
+            var payload = cached[1];
+            var contentType = cached[2];
             if (!statusCode.HasValue)
             {
                 var newValue = await cacheMissResolver();
                 if (newValue != null)
                 {
-                    await CacheMethodResult(parameters, statusCodeFieldName, jsonFieldName, newValue);
+                    await CacheMethodResult(parameters, statusCodeFieldName, payloadFieldName, contentTypeFieldName, newValue);
                 }
 
                 return new CacheGetResult(false, null);
@@ -103,8 +65,7 @@ namespace Como.WebApi.Caching
                 await database.KeyExpireAsync(key, parameters.ExpirationTime.Value);
             }
 
-            var result = new RawActionResult((int) statusCode, json,
-                json.HasValue ? RawActionResult.JsonContentType : null,
+            var result = new RawActionResult((int) statusCode, payload, contentType,
                 new Dictionary<string, string>
                 {
                     ["x-served-from-cache"] = "true"
@@ -113,7 +74,8 @@ namespace Como.WebApi.Caching
         }
 
         private async Task CacheMethodResult(
-            CacheMethodParameters parameters, string statusCodeFieldName, string jsonFieldName, IActionResult result)
+            CacheMethodParameters parameters, string statusCodeFieldName, 
+            string payloadFieldName, string contentTypeFieldName, IActionResult result)
         {
             var entries = new List<HashEntry>();
             switch (result)
@@ -122,9 +84,10 @@ namespace Como.WebApi.Caching
                 case ObjectResult objectResult:
                 {
                     var statusCode = objectResult.StatusCode ?? (int) HttpStatusCode.OK;
-                    var json = SerializeObjectToJson(objectResult.Value);
+                    var payload = _serializationResolver.Serialize(parameters.OutputContentType, objectResult.Value);                    
                     entries.Add(new HashEntry(statusCodeFieldName, statusCode));
-                    entries.Add(new HashEntry(jsonFieldName, json));
+                    entries.Add(new HashEntry(payloadFieldName, payload));
+                    entries.Add(new HashEntry(contentTypeFieldName, parameters.OutputContentType));
                     break;
                 }
                 case StatusCodeResult statusCodeResult:
@@ -152,63 +115,12 @@ namespace Como.WebApi.Caching
             return $"{methodName}:{scopeName}:{scopeValue}";
         }
 
-        private (string statusCodeFieldName, string jsonFieldName)
+        private (string statusCodeFieldName, string payloadFieldNamem, string contentTypeFieldName)
             GetCacheParametersFieldNames(CacheMethodParameters parameters)
         {
-            var parametersHash = _jsonOutputFormatter.ComputeHash(parameters.Parameters);
-            return ($"{parametersHash}:statusCode", $"{parametersHash}:json");
+            var parametersHash = _serializationResolver.ComputeHash(parameters.Parameters);
+            return ($"{parametersHash}:statusCode", $"{parametersHash}:payload", $"{parametersHash}:contentType");
         }
 
-        private JsonOutputFormatter GetJsonOutputFormatterFromMvcOptions(IOptions<MvcOptions> mvcOptions)
-        {
-            foreach (var outputFormatter in mvcOptions.Value.OutputFormatters)
-            {
-                if (outputFormatter is JsonOutputFormatter jsonOutputFormatter)
-                {
-                    return jsonOutputFormatter;
-                }
-            }
-
-            throw new KeyNotFoundException("Couldn't find JSON output formatter!");
-        }
-
-        private byte[] SerializeObjectToJson(object obj)
-        {
-            using (var outputStream = new MemoryStream())
-            {
-                using (var streamWriter = new StreamWriter(outputStream))
-                {
-                    _jsonOutputFormatter.WriteObject(streamWriter, obj);
-                }
-
-                return outputStream.ToArray();
-            }
-        }
-
-        private void ProcessDelayedActionsQueue()
-        {
-            var dequeuedBuffer = new List<DelayedInvalidationParameters>();
-            while (_methodsToInvalidate.TryDequeue(out var item))
-            {
-                if (DateTime.UtcNow < item.DueTime)
-                {
-                    dequeuedBuffer.Add(item);
-                }
-                else
-                {
-                    try
-                    {
-                        InvalidateCachedMethodResults(item.Methods).Wait();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex,
-                            "Error occurred while trying to invalidate a cached method (delayed)!");
-                    }
-                }
-            }
-
-            dequeuedBuffer.ForEach(_methodsToInvalidate.Enqueue);
-        }
     }
 }

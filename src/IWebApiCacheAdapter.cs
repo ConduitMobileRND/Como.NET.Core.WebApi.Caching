@@ -13,12 +13,6 @@ namespace Como.WebApi.Caching
         Task InvalidateCachedMethodResults(IList<MethodInvalidationParameters> methodParameters);
 
         /// <summary>
-        ///     Remove a possibly cached method result from the cache after a certain delay
-        /// </summary>
-        void InvalidateCachedMethodResultsWithDelay(IList<MethodInvalidationParameters> methodParameters,
-            TimeSpan delay);
-
-        /// <summary>
         ///     Try to fetch a possibly cached method result
         /// </summary>
         Task<CacheGetResult> GetOrUpdate(CacheMethodParameters parameters, Func<Task<IActionResult>> onCacheMiss);
