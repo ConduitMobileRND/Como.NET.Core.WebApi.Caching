@@ -1,27 +1,39 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace Como.WebApi.Caching
 {
-    public class RedisWebApiWebApiCacheAdapter : IWebApiCacheAdapter
+    public class RedisWebApiWebApiCacheAdapter : IWebApiCacheAdapter, IHostedService, IDisposable
     {
         private readonly JsonOutputFormatter _jsonOutputFormatter;
         private readonly IConnectionMultiplexer _redisConnectionMultiplexer;
+        private readonly ILogger<IWebApiCacheAdapter> _logger;
+        private readonly ConsecutiveTimer _timer;        
+        private readonly ConcurrentQueue<DelayedInvalidationParameters> _methodsToInvalidate;
 
         public RedisWebApiWebApiCacheAdapter(
             IConnectionMultiplexer redisConnectionMultiplexer,
-            IOptions<MvcOptions> mvcOptions)
+            IOptions<MvcOptions> mvcOptions,
+            ILogger<IWebApiCacheAdapter> logger)
         {
-            _redisConnectionMultiplexer = redisConnectionMultiplexer;
+            _timer = new ConsecutiveTimer();
+            _timer.OnTick += ProcessDelayedActionsQueue;
+            _methodsToInvalidate = new ConcurrentQueue<DelayedInvalidationParameters>();
+            _redisConnectionMultiplexer = redisConnectionMultiplexer;                        
             _jsonOutputFormatter = GetJsonOutputFormatterFromMvcOptions(mvcOptions);
+            _logger = logger;
         }
 
         public async Task InvalidateCachedMethodResults(IList<MethodInvalidationParameters> methodParameters)
@@ -37,6 +49,16 @@ namespace Como.WebApi.Caching
             }
 
             await database.KeyDeleteAsync(keys);
+        }
+
+        public void InvalidateCachedMethodResultsWithDelay(
+            IList<MethodInvalidationParameters> methodParameters, TimeSpan delay)
+        {
+            _methodsToInvalidate.Enqueue(new DelayedInvalidationParameters
+            {
+                Methods = methodParameters,
+                DueTime = DateTime.UtcNow + delay
+            });
         }
 
         public async Task<CacheGetResult> GetOrUpdate(
@@ -144,6 +166,48 @@ namespace Como.WebApi.Caching
 
                 return outputStream.ToArray();
             }
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _timer.Start(TimeSpan.FromMilliseconds(100));
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _timer?.Stop();
+            return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+        }
+
+        private void ProcessDelayedActionsQueue()
+        {
+            var dequeuedBuffer = new List<DelayedInvalidationParameters>();
+            while (_methodsToInvalidate.TryDequeue(out var item))
+            {
+                if (DateTime.UtcNow < item.DueTime)
+                {
+                    dequeuedBuffer.Add(item);
+                }
+                else
+                {
+                    try
+                    {
+                        InvalidateCachedMethodResults(item.Methods).Wait();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Error occurred while trying to invalidate a cached method (delayed)!");
+                    }
+                }
+            }
+            dequeuedBuffer.ForEach(_methodsToInvalidate.Enqueue);
         }
     }
 }
