@@ -4,12 +4,8 @@ A library for .NET Core 2 WebApi methods caching
 [![NuGet Pre Release](https://img.shields.io/nuget/vpre/Como.NetCore.WebApi.Caching.svg?style=popout)](https://www.nuget.org/packages/Como.NetCore.WebApi.Caching/)
 
 Current capabilities:
-* Cache JSON methods' output based on method's input parameters and user defined scope (e.g. per user, per tenant etc...)
+* Cache methods' output based on method's input parameters and user defined scope (e.g. per user, per tenant etc...)
 * Supports Redis as caching backend, altough any backend can be used by implementing the `IWebApiCacheAdapter` interface
-
-Current limitations:
-* Only JSON output is currently supported
-* Very basic Cache-Control header support (possibly not fully RFC compliant)
 
 #####  Usage
 `MySomethingController.cs`
@@ -52,17 +48,15 @@ Current limitations:
 ```csharp
     ConfigureServices(IServiceCollection services)  {
         ...
-        services.AddSingleton<IWebApiCacheAdapter, RedisWebApiWebApiCacheAdapter>();
-        services.AddSingleton<ICacheParametersResolver, MyCacheParametersResolver>();
-        ...
         services.AddMvc(options => {
             ...
             options.Filters.Add<MyAuthenticationFilter>();
             options.Filters.Add<MyAuthrizationFilter>();
-            // note to call this method only after the authorization and authentication filters (if any) were registered,
-            // otherwise, non-authenticated/non-authorized users might get sensitive data from cache since they skipped the required authorization and/or authentication processes.
-            options.UseWebApiCaching();
-        });
+            ...
+        })         
+        .AddWebApiCaching<MyCacheParametersResolver>();
+        // ^ note to call this  method only after the authorization and authentication filters (if any) were registered,
+         // otherwise, non-authenticated/non-authorized users might get sensitive data from cache since they skipped the required authorization and/or authentication processes.
     }
 ```
 `MyCacheParametersResolver.cs`
