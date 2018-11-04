@@ -26,12 +26,15 @@ namespace Como.WebApi.Caching
         private static IDictionary<string, List<MethodInfo>> _cachedMethodsPerGroup;
         private readonly IWebApiCacheAdapter _cacheAdapter;
         private readonly ICacheParametersResolver _cacheParametersResolver;
+        private readonly DelayedInvalidationQueue _delayedInvalidationQueue;
 
         public CachingFilter(IWebApiCacheAdapter cacheAdapterAdapter,
-            ICacheParametersResolver cacheParametersResolver)
+            ICacheParametersResolver cacheParametersResolver,
+            DelayedInvalidationQueue delayedInvalidationQueue)
         {
             _cacheAdapter = cacheAdapterAdapter;
             _cacheParametersResolver = cacheParametersResolver;
+            _delayedInvalidationQueue = delayedInvalidationQueue;
             _cachedMethodsPerGroup = _cachedMethodsPerGroup ?? GetCachedMethodsPerGroup();
         }
 
@@ -40,12 +43,15 @@ namespace Como.WebApi.Caching
             var actionDescriptor = (ControllerActionDescriptor) context.ActionDescriptor;
             var actionMethod = actionDescriptor.MethodInfo;
             var invalidatesAttribute = actionMethod.GetCustomAttribute<InvalidatesCacheAttribute>();
+            var delayedInvalidatesAttribute = actionMethod.GetCustomAttribute<DelayedInvalidatesCacheAttribute>();
+
             var cachedAttribute = actionMethod.GetCustomAttribute<CachedAttribute>();
-            if (cachedAttribute != null && invalidatesAttribute != null)
+            if (cachedAttribute != null && (invalidatesAttribute != null || delayedInvalidatesAttribute != null))
             {
                 throw new InvalidOperationException("Method can either have " +
                                                     $"{nameof(CachedAttribute)} " +
-                                                    $"or {nameof(InvalidatesCacheAttribute)} but not both! " +
+                                                    $"or {nameof(InvalidatesCacheAttribute)}" +
+                                                    $"/{nameof(DelayedInvalidatesCacheAttribute)} but not both! " +
                                                     $"[method name: {actionMethod.GetUniqueIdentifier()}]");
             }
 
@@ -66,6 +72,11 @@ namespace Como.WebApi.Caching
             if (invalidatesAttribute != null)
             {
                 await HandleInvalidatesAttribute(invalidatesAttribute, context);
+            }
+
+            if (delayedInvalidatesAttribute != null)
+            {
+                HandleDelayedInvalidatesAttribute(delayedInvalidatesAttribute, context);
             }
         }
 
@@ -104,11 +115,14 @@ namespace Como.WebApi.Caching
             }
 
             var scopeValue = _cacheParametersResolver.ResolveScopeValue(attribute.ScopeName, context);
+            var outputContentType = actionMethod.GetCustomAttribute<ProducesAttribute>()?.ContentTypes.First()
+                                    ?? RawActionResult.JsonContentType;
             var methodParameters = new CacheMethodParameters(
                 actionMethod.GetUniqueIdentifier(),
                 attribute.ScopeName,
                 scopeValue,
                 context.ActionArguments,
+                outputContentType,
                 attribute.ExpireAfterTimeSpan ?? _cacheParametersResolver.DefaultExpiration,
                 attribute.SlidingExpiration);
             var cacheGetResult = await _cacheAdapter.GetOrUpdate(methodParameters, () => OnCacheMiss(next));
@@ -198,6 +212,30 @@ namespace Como.WebApi.Caching
             }
 
             return result;
+        }
+
+        private void HandleDelayedInvalidatesAttribute(DelayedInvalidatesCacheAttribute attribute,
+            ActionExecutingContext context)
+        {
+            var invalidationParameters = new List<MethodInvalidationParameters>();
+            foreach (var cacheGroup in attribute.CacheGroups)
+            {
+                if (!_cachedMethodsPerGroup.TryGetValue(cacheGroup, out var methods))
+                {
+                    continue;
+                }
+
+                foreach (var cachedMethod in methods)
+                {
+                    var targetMethodCacheAttribute = cachedMethod.GetCustomAttribute<CachedAttribute>();
+                    var scopeValue =
+                        _cacheParametersResolver.ResolveScopeValue(targetMethodCacheAttribute.ScopeName, context);
+                    invalidationParameters.Add(new MethodInvalidationParameters(
+                        cachedMethod.GetUniqueIdentifier(), targetMethodCacheAttribute.ScopeName, scopeValue));
+                }
+            }
+
+            _delayedInvalidationQueue.Enqueue(invalidationParameters, attribute.InvalidatesAfter);
         }
     }
 }
