@@ -11,14 +11,14 @@ namespace Como.WebApi.Caching
     public class RedisWebApiWebApiCacheAdapter : IWebApiCacheAdapter
     {
         private readonly IConnectionMultiplexer _redisConnectionMultiplexer;
-        private readonly ISerializationResolver _serializationResolver;
+        private readonly SerializationHelper _serializationHelper;
 
         public RedisWebApiWebApiCacheAdapter(
             IConnectionMultiplexer redisConnectionMultiplexer, 
-            ISerializationResolver serializationResolver)
+            SerializationHelper serializationHelper)
         {
             _redisConnectionMultiplexer = redisConnectionMultiplexer;
-            _serializationResolver = serializationResolver;
+            _serializationHelper = serializationHelper;
         }
 
         public async Task InvalidateCachedMethodResults(IList<MethodInvalidationParameters> methodParameters)
@@ -84,7 +84,7 @@ namespace Como.WebApi.Caching
                 case ObjectResult objectResult:
                 {
                     var statusCode = objectResult.StatusCode ?? (int) HttpStatusCode.OK;
-                    var payload = _serializationResolver.Serialize(parameters.OutputContentType, objectResult.Value);                    
+                    var payload = await _serializationHelper.Serialize(parameters.OutputContentType, objectResult.Value);                    
                     entries.Add(new HashEntry(statusCodeFieldName, statusCode));
                     entries.Add(new HashEntry(payloadFieldName, payload));
                     entries.Add(new HashEntry(contentTypeFieldName, parameters.OutputContentType));
@@ -118,7 +118,7 @@ namespace Como.WebApi.Caching
         private (string statusCodeFieldName, string payloadFieldNamem, string contentTypeFieldName)
             GetCacheParametersFieldNames(CacheMethodParameters parameters)
         {
-            var parametersHash = _serializationResolver.ComputeHash(parameters.Parameters);
+            var parametersHash = _serializationHelper.ComputeHash(parameters.Parameters);
             return ($"{parametersHash}:statusCode", $"{parametersHash}:payload", $"{parametersHash}:contentType");
         }
 

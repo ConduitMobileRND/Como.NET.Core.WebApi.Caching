@@ -11,7 +11,7 @@ namespace Como.WebApi.Caching
     /// </summary>
     public class RawActionResult : ActionResult
     {
-        public const string JsonContentType = "application/json; charset=utf-8";
+        public const string JsonContentType = "application/json";
         private readonly string _contentType;
 
         private readonly IDictionary<string, string> _headers;

@@ -16,7 +16,7 @@ namespace Como.WebApi.Caching
             where TParamsResolver : class, ICacheParametersResolver
             where TWebApiCacheAdapter : class, IWebApiCacheAdapter
         {
-            builder.Services.AddSingleton<ISerializationResolver, SerializationResolver>();
+            builder.Services.AddSingleton<SerializationHelper>();
             builder.Services.AddSingleton<IWebApiCacheAdapter, TWebApiCacheAdapter>();
             builder.Services.AddSingleton<DelayedInvalidationQueue>();
             builder.Services.AddTransient<IHostedService, DelayedInvalidationQueueProcessor>();

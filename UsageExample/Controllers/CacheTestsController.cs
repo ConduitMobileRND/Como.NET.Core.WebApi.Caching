@@ -18,15 +18,15 @@ namespace UsageExample.Controllers
             SlidingExpiration = false)]
         public string Get()
         {
-            return $@"<HTML>
-    <BODY>
+            return $@"<html>
+    <body>
         Cached at {DateTime.Now:HH:mm:ss}.
         Will expire at {DateTime.Now.AddSeconds(10):HH:mm:ss}.
-        <SCRIPT>
-            setTimeout(1000, window.reload);
-        </SCRIPT>
-    </BODY>
-</HTML>";
+        <script>
+            setTimeout(()=> location.reload(), 1000);
+        </script>
+    </body>
+</html>";
         }
 
         // GET api/values/5
