@@ -17,7 +17,7 @@ namespace Como.WebApi.Caching
         private readonly IDictionary<string, OutputFormatter> _outputFormatters;
 
         public SerializationHelper(IOptions<MvcOptions> mvcOptions)
-        {            
+        {
             _outputFormatters = new Dictionary<string, OutputFormatter>();
             foreach (var formatter in mvcOptions.Value.OutputFormatters.OfType<OutputFormatter>())
             {
@@ -25,7 +25,7 @@ namespace Como.WebApi.Caching
                 {
                     _outputFormatters[mediaType] = formatter;
                 }
-            }            
+            }
         }
 
         private byte[] SerializeObjectToJson(object obj)
@@ -44,26 +44,31 @@ namespace Como.WebApi.Caching
 
         public async Task<byte[]> Serialize(string contentTypeFormatterId, object value)
         {
-            if (!_outputFormatters.TryGetValue(contentTypeFormatterId, out var formatter))            
+            if (!_outputFormatters.TryGetValue(contentTypeFormatterId, out var formatter))
             {
                 throw new UnsupportedContentTypeException(
                     $"Output formatter for the content type '{contentTypeFormatterId}' was not found or is not supported");
             }
 
+            if (value == null)
+            {
+                return new byte[0];
+            }
+
             using (var outputStream = new MemoryStream())
             {
-                var ctx = new DefaultHttpContext {Response = {Body = outputStream}};
-                var cta = new OutputFormatterWriteContext(ctx, (stream, encoding) => new StreamWriter(stream, encoding),
-                    value.GetType(), value);
-                if (formatter is TextOutputFormatter tof)
+                var httpContext = new DefaultHttpContext {Response = {Body = outputStream}};
+                var outputFormatterWriteContext = new OutputFormatterWriteContext(httpContext,
+                    (stream, encoding) => new StreamWriter(stream, encoding), value.GetType(), value);
+                if (formatter is TextOutputFormatter textOutputFormatter)
                 {
-                    await tof.WriteResponseBodyAsync(cta, Encoding.UTF8);    
+                    await textOutputFormatter.WriteResponseBodyAsync(outputFormatterWriteContext, Encoding.UTF8);
                 }
                 else
                 {
-                    await formatter.WriteResponseBodyAsync(cta);
+                    await formatter.WriteResponseBodyAsync(outputFormatterWriteContext);
                 }
-                
+
                 var result = outputStream.ToArray();
                 return result;
             }

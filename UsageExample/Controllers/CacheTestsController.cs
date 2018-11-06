@@ -29,6 +29,18 @@ namespace UsageExample.Controllers
 </html>";
         }
 
+        // GET api/values
+        [HttpGet("null")]
+        [Produces("application/json")]
+        [Cached(MyCacheConstants.CacheGroupValues,
+            ScopeName = MyCacheConstants.CacheScopePerUser,
+            ExpireAfter = "00:00:10",
+            SlidingExpiration = false)]
+        public string GetNull()
+        {
+            return null;
+        }
+
         // GET api/values/5
         [HttpGet("invalidate")]
         [DelayedInvalidatesCache("00:00:03", MyCacheConstants.CacheGroupValues)]
