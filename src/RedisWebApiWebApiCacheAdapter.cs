@@ -84,7 +84,8 @@ namespace Como.WebApi.Caching
                 case ObjectResult objectResult:
                 {
                     var statusCode = objectResult.StatusCode ?? (int) HttpStatusCode.OK;
-                    var payload = await _serializationHelper.Serialize(parameters.OutputContentType, objectResult.Value);                    
+                    var contentTypeFormatterId = parameters.OutputContentType.Split(';')[0];
+                    var payload = await _serializationHelper.Serialize(contentTypeFormatterId, objectResult.Value);                    
                     entries.Add(new HashEntry(statusCodeFieldName, statusCode));
                     entries.Add(new HashEntry(payloadFieldName, payload));
                     entries.Add(new HashEntry(contentTypeFieldName, parameters.OutputContentType));

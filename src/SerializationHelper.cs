@@ -30,7 +30,7 @@ namespace Como.WebApi.Caching
 
         private byte[] SerializeObjectToJson(object obj)
         {
-            var jsonOutputFormatter = (JsonOutputFormatter) _outputFormatters[RawActionResult.JsonContentType];
+            var jsonOutputFormatter = (JsonOutputFormatter) _outputFormatters["application/json"];
             using (var outputStream = new MemoryStream())
             {
                 using (var streamWriter = new StreamWriter(outputStream))
@@ -42,12 +42,12 @@ namespace Como.WebApi.Caching
             }
         }
 
-        public async Task<byte[]> Serialize(string outputContentType, object value)
+        public async Task<byte[]> Serialize(string contentTypeFormatterId, object value)
         {
-            if (!_outputFormatters.TryGetValue(outputContentType, out var formatter))            
+            if (!_outputFormatters.TryGetValue(contentTypeFormatterId, out var formatter))            
             {
                 throw new UnsupportedContentTypeException(
-                    $"Output formatter for the content type '{outputContentType}' was not found or is not supported");
+                    $"Output formatter for the content type '{contentTypeFormatterId}' was not found or is not supported");
             }
 
             using (var outputStream = new MemoryStream())

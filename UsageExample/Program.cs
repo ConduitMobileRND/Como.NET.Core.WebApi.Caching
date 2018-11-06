@@ -13,6 +13,7 @@ namespace UsageExample
         public static IWebHostBuilder CreateWebHostBuilder(string[] args)
         {
             return WebHost.CreateDefaultBuilder(args)
+                .UseUrls("http://localhost:5003/")
                 .UseStartup<Startup>();
         }
     }
