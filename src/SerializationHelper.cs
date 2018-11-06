@@ -57,7 +57,7 @@ namespace Como.WebApi.Caching
                     (stream, encoding) => new StreamWriter(stream, encoding), value.GetType(), value);
                 if (formatter is TextOutputFormatter textOutputFormatter)
                 {
-                    await textOutputFormatter.WriteResponseBodyAsync(outputFormatterWriteContext, Encoding.UTF8);
+                    await textOutputFormatter.WriteResponseBodyAsync(outputFormatterWriteContext, Encoding.Default);
                 }
                 else
                 {
