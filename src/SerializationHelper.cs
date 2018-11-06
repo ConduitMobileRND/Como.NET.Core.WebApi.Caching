@@ -50,11 +50,6 @@ namespace Como.WebApi.Caching
                     $"Output formatter for the content type '{contentTypeFormatterId}' was not found or is not supported");
             }
 
-            if (value == null)
-            {
-                return new byte[0];
-            }
-
             using (var outputStream = new MemoryStream())
             {
                 var httpContext = new DefaultHttpContext {Response = {Body = outputStream}};

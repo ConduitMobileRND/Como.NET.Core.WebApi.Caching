@@ -41,7 +41,8 @@ namespace Como.WebApi.Caching
         {
             var database = _redisConnectionMultiplexer.GetDatabase();
             var key = GetCacheKey(parameters.MethodName, parameters.ScopeName, parameters.ScopeValue);
-            var (statusCodeFieldName, payloadFieldName, contentTypeFieldName) = GetCacheParametersFieldNames(parameters);
+            var (statusCodeFieldName, payloadFieldName, contentTypeFieldName) =
+                GetCacheParametersFieldNames(parameters);
             var cached = await database.HashGetAsync(key, new RedisValue[]
             {
                 statusCodeFieldName, payloadFieldName, contentTypeFieldName
@@ -54,7 +55,8 @@ namespace Como.WebApi.Caching
                 var newValue = await cacheMissResolver();
                 if (newValue != null)
                 {
-                    await CacheMethodResult(parameters, statusCodeFieldName, payloadFieldName, contentTypeFieldName, newValue);
+                    await CacheMethodResult(parameters, statusCodeFieldName, payloadFieldName, contentTypeFieldName,
+                        newValue);
                 }
 
                 return new CacheGetResult(false, null);
@@ -65,11 +67,13 @@ namespace Como.WebApi.Caching
                 await database.KeyExpireAsync(key, parameters.ExpirationTime.Value);
             }
 
-            var result = new RawActionResult((int) statusCode, payload, contentType,
+            ActionResult result = new RawActionResult((int) statusCode, payload, contentType,
                 new Dictionary<string, string>
                 {
                     ["x-served-from-cache"] = "true"
                 });
+
+
             return new CacheGetResult(true, result);
         }
 
@@ -85,10 +89,13 @@ namespace Como.WebApi.Caching
                 {
                     var statusCode = objectResult.StatusCode ?? (int) HttpStatusCode.OK;
                     var contentTypeFormatterId = parameters.OutputContentType.Split(';')[0];
-                    var payload = await _serializationHelper.Serialize(contentTypeFormatterId, objectResult.Value);                    
+                    if (objectResult.Value != null)
+                    {
+                        var payload = await _serializationHelper.Serialize(contentTypeFormatterId, objectResult.Value);
+                        entries.Add(new HashEntry(payloadFieldName, payload));
+                        entries.Add(new HashEntry(contentTypeFieldName, parameters.OutputContentType));
+                    }
                     entries.Add(new HashEntry(statusCodeFieldName, statusCode));
-                    entries.Add(new HashEntry(payloadFieldName, payload));
-                    entries.Add(new HashEntry(contentTypeFieldName, parameters.OutputContentType));
                     break;
                 }
                 case StatusCodeResult statusCodeResult:

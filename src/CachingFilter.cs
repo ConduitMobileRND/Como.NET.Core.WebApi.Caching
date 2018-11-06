@@ -157,7 +157,7 @@ namespace Como.WebApi.Caching
                     throw new UnsupportedContentTypeException("unsupported WebApi method result type!");
             }
 
-            if (httpStatusCode < 200 || httpStatusCode > 299)
+            if (httpStatusCode < StatusCodes.Status200OK || httpStatusCode > 299)
             {
                 return null;
             }

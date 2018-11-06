@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Como.WebApi.Caching
@@ -45,10 +46,17 @@ namespace Como.WebApi.Caching
                 }
             }
 
-            response.StatusCode = _statusCode;
             if (_payload?.Length > 0)
             {
+                response.StatusCode = _statusCode;
                 await response.Body.WriteAsync(_payload, 0, _payload.Length);
+            }
+            else
+            {
+                response.StatusCode =
+                    _statusCode == StatusCodes.Status200OK
+                        ? StatusCodes.Status204NoContent
+                        : _statusCode;
             }
         }
     }
