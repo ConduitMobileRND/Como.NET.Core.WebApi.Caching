@@ -1,22 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp2.0</TargetFramework>
+        <TargetFramework>netcoreapp2.1</TargetFramework>
         <AssemblyName>Como.NetCore.WebApi.Caching</AssemblyName>
         <RootNamespace>Como.WebApi.Caching</RootNamespace>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <Authors>eitan@como.com</Authors>
-        <Version>0.0.6</Version>
+        <Version>0.0.7</Version>
         <PackageLicenseUrl>https://github.com/ConduitMobileRND/Como.NET.Core.WebApi.Caching/blob/master/LICENSE</PackageLicenseUrl>
         <PackageProjectUrl>https://github.com/ConduitMobileRND/Como.NET.Core.WebApi.Caching</PackageProjectUrl>
         <Copyright>Como</Copyright>
         <RepositoryUrl>https://github.com/ConduitMobileRND/Como.NET.Core.WebApi.Caching</RepositoryUrl>
         <PackageTags>WebApi .NET Core Cache Caching</PackageTags>
+        <LangVersion>7</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+        <PackageReference Include="Microsoft.AspNetCore.All" Version="2.1.6" />
         <PackageReference Include="StackExchange.Redis.StrongName" Version="1.2.6" />
     </ItemGroup>
 </Project>
