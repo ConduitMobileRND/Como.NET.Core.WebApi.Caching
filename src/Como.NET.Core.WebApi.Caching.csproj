@@ -4,8 +4,8 @@
         <TargetFramework>net5.0</TargetFramework>
         <AssemblyName>Como.NetCore.WebApi.Caching</AssemblyName>
         <RootNamespace>Como.WebApi.Caching</RootNamespace>
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-        <Authors>eitan@como.com</Authors>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>devops@como.com</Authors>
         <Version>0.0.8</Version>
         <PackageLicenseUrl>https://github.com/ConduitMobileRND/Como.NET.Core.WebApi.Caching/blob/master/LICENSE</PackageLicenseUrl>
         <PackageProjectUrl>https://github.com/ConduitMobileRND/Como.NET.Core.WebApi.Caching</PackageProjectUrl>
@@ -15,11 +15,12 @@
         <LangVersion>7</LangVersion>
         <OutputType>Library</OutputType>
         <IsPackable>true</IsPackable>
+        <PackageVersion>1.0.8</PackageVersion>
+        <PackageId>ComoSense.WebApi.Caching</PackageId>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />        
         <PackageReference Include="StackExchange.Redis" Version="2.2.4" />
     </ItemGroup>
 </Project>
