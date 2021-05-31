@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp2.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
         <AssemblyName>Como.NetCore.WebApi.Caching</AssemblyName>
         <RootNamespace>Como.WebApi.Caching</RootNamespace>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -18,8 +18,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
         <PackageReference Include="Microsoft.AspNetCore.App" />
-        <PackageReference Include="StackExchange.Redis.StrongName" Version="1.2.6" />
+        <PackageReference Include="StackExchange.Redis" Version="2.2.4" />
     </ItemGroup>
 </Project>

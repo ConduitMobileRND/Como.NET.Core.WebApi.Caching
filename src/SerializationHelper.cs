@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -30,12 +31,11 @@ namespace Como.WebApi.Caching
 
         private byte[] SerializeObjectToJson(object obj)
         {
-            var jsonOutputFormatter = (JsonOutputFormatter) _outputFormatters["application/json"];
             using (var outputStream = new MemoryStream())
             {
-                using (var streamWriter = new StreamWriter(outputStream))
+                using (new StreamWriter(outputStream))
                 {
-                    jsonOutputFormatter.WriteObject(streamWriter, obj);
+                    JsonSerializer.SerializeAsync(outputStream, obj);
                 }
 
                 return outputStream.ToArray();
@@ -53,6 +53,7 @@ namespace Como.WebApi.Caching
             using (var outputStream = new MemoryStream())
             {
                 var httpContext = new DefaultHttpContext {Response = {Body = outputStream}};
+                //httpContext.Request.EnableBuffering();
                 var outputFormatterWriteContext = new OutputFormatterWriteContext(httpContext,
                     (stream, encoding) => new StreamWriter(stream, encoding), value.GetType(), value);
                 if (formatter is TextOutputFormatter textOutputFormatter)
